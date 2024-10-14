@@ -7,6 +7,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class SimpleController {
     @GetMapping("/")
     public String home(){
-        return "Hello, World CICD third";
+        return "Hello, World CICD fourth";
     }
 }
