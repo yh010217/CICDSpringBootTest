@@ -46,6 +46,9 @@ jobs:
             cd /home/ubuntu/CICDSpringBootTest
             rm -rf src/main/resources/application.yml
             git pull origin main
+            cat "----------"
+            cat "$APPLICATION_PROPERTIES"
+            cat "----------"
             echo "$APPLICATION_PROPERTIES" > src/main/resources/application.yml
             chmod +x ./gradlew
             ./gradlew clean build
