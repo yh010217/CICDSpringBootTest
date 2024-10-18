@@ -44,7 +44,7 @@ jobs:
           #끄겠다고 하면 에러날수도 있음. 그냥 없었어도 잘 했구나 해줘야함
           script: |
             cd /home/ubuntu/CICDSpringBootTest
-            rm -rf src/main/resources/application.yml
+            rm -rf src/main/resources/application.yml || true
             git pull origin main
             echo "$APPLICATION_PROPERTIES" > src/main/resources/application.yml
             ./gradlew clean build
