@@ -45,7 +45,9 @@ jobs:
           script: |
             cd /home/ubuntu/CICDSpringBootTest
             git pull origin main
-            rm -rf src/main/resources/application.yml
+            if [ -f src/main/resources/application.yml ]; then
+              rm -rf src/main/resources/application.yml
+            fi
             echo "$APPLICATION_PROPERTIES" > src/main/resources/application.yml
             ./gradlew clean build
             sudo fuser -k -n tcp 8080 || true
