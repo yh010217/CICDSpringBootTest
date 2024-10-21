@@ -31,29 +31,17 @@ jobs:
       - name: 빌드된 파일 이름 변경하기
         run: mv ./build/libs/*SNAPSHOT.jar ./project.jar
 
-      - name: SCP로 EC2에 빌드된 파일을 업로드
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_PRIVATE_KEY }}
-          source: project.jar
-          target: /home/ubuntu/CICDSpringBootTest/tobe
-
-
 
 
       - name: Get Actions IP
         id: ip
         uses: haythem/public-ip@v1.3
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: 'ap-northeast-2'
-
       - name: Add GitHub Actions IP
         run: |
           aws ec2 authorize-security-group-ingress \
@@ -63,6 +51,14 @@ jobs:
               --cidr ${{ steps.ip.outputs.ipv4 }}/32
 
 
+      - name: SCP로 EC2에 빌드된 파일을 업로드
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          source: project.jar
+          target: /home/ubuntu/CICDSpringBootTest/tobe
 
       - name: SSH로 EC2 원격 접속하기
         uses: appleboy/ssh-action@v1.1.0
