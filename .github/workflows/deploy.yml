@@ -14,7 +14,8 @@ jobs:
       - name: Github Repository에 올린 파일 불러오기
         uses: actions/checkout@v2
 
-      # 근데 말이야.. checkout이라는 라이브러리 잘 가져온거 맞음....? -> 테스트 해보기
+      # 근데 말이야.. checkout이라는 라이브러리 써서
+      # 내 깃허브 프로젝트 잘 가져온거 맞음....? -> 테스트 해보기
       - name: Checkout Library Test
         run: |
           ls
@@ -38,23 +39,26 @@ jobs:
         run: mv ./build/libs/*SNAPSHOT.jar ./project.jar
 
 
+      - name: 압축하기 -> 곧 S3 로 움직일 거임
+        run: tar -czvf $GITHUB_SHA.tar.gz project.jar appspec.yml scripts
 
-      - name: Get Actions IP
-        id: ip
-        uses: haythem/public-ip@v1.3
-      - name: Configure AWS credentials
+      - name: AWS 자원에 접근 가능하게 AWS credentials 설정
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-region: ap-northeast-2
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: 'ap-northeast-2'
-      - name: Add GitHub Actions IP
-        run: |
-          aws ec2 authorize-security-group-ingress \
-              --group-id ${{ secrets.SECURITY_GROUP_ID }} \
-              --protocol tcp \
-              --port 22 \
-              --cidr ${{ steps.ip.outputs.ipv4 }}/32
+          aws-secret-access-key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+
+      - name: S3에 프로젝트 폴더 업로드하기
+        run: aws s3 cp --region ap-northeast-2 ./$GITHUB_SHA.tar.gz s3://CICDSpringBootTest/$GITHUB_SHA.tar.gz
+
+      - name: 코드디플로이를 활용해 EC2에 프로젝트 코드를 배포하라고 명령
+        run: aws deploy create-deployment
+            --application-name CICDSpringBootTest
+            --deployment-config CodeDeployDefault.AllAtOnce
+            --deployment-group-name Production
+            --s3-location bucket=cicd-test-s3-typehoon-auhfkvzj,bundleType=tgz,key=$GITHUB_SHA.tar.gz
+
 
 
       - name: SCP로 EC2에 빌드된 파일을 업로드
@@ -108,3 +112,25 @@ jobs:
 #            sudo fuser -k -n tcp 80 || true
 #            sudo nohup java -jar build/libs/*SNAPSHOT.jar > ./output.log 2>&1 &
 #
+
+
+# 원래 이거로 EC2 접근 했었는데, 방식 3으로 하면 좀 다름 (codedeploy 랑 s3에 접근하게 됨)
+# 근데 사실 이거 저장 안해서 큰일나긴 함 ㅋ
+#      - name: Get Actions IP
+#        id: ip
+#        uses: haythem/public-ip@v1.3
+#      - name: Configure AWS credentials
+#        uses: aws-actions/configure-aws-credentials@v4
+#        with:
+#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          aws-region: 'ap-northeast-2'
+#      - name: Add GitHub Actions IP
+#        run: |
+#          aws ec2 authorize-security-group-ingress \
+#              --group-id ${{ secrets.SECURITY_GROUP_ID }} \
+#              --protocol tcp \
+#              --port 22 \
+#              --cidr ${{ steps.ip.outputs.ipv4 }}/32
+
+
