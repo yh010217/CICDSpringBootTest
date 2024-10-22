@@ -47,7 +47,7 @@ jobs:
         with:
           aws-region: ap-northeast-2
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: S3에 프로젝트 폴더 업로드하기
         run: aws s3 cp --region ap-northeast-2 ./$GITHUB_SHA.tar.gz s3://CICDSpringBootTest/$GITHUB_SHA.tar.gz
@@ -59,32 +59,6 @@ jobs:
             --deployment-group-name Production
             --s3-location bucket=cicd-test-s3-typehoon-auhfkvzj,bundleType=tgz,key=$GITHUB_SHA.tar.gz
 
-
-
-      - name: SCP로 EC2에 빌드된 파일을 업로드
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_PRIVATE_KEY }}
-          source: project.jar
-          target: /home/ubuntu/CICDSpringBootTest/tobe
-
-      - name: SSH로 EC2 원격 접속하기
-        uses: appleboy/ssh-action@v1.1.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_PRIVATE_KEY }}
-          script_stop: true
-          script: |
-            rm -rf /home/ubuntu/CICDSpringBootTest/current
-            mkdir /home/ubuntu/CICDSpringBootTest/current
-            mv /home/ubuntu/CICDSpringBootTest/tobe/project.jar /home/ubuntu/CICDSpringBootTest/current/project.jar
-            cd /home/ubuntu/CICDSpringBootTest/current
-            sudo juser -k -n tcp 8080 || true
-            sudo nohup java -jar project.jar > ./output.log 2>&1 &
-            rm -rf /home/ubuntu/CICDSpringBootTest/tobe
 
 
 
@@ -132,5 +106,34 @@ jobs:
 #              --protocol tcp \
 #              --port 22 \
 #              --cidr ${{ steps.ip.outputs.ipv4 }}/32
+
+
+#
+#
+#      - name: SCP로 EC2에 빌드된 파일을 업로드
+#        uses: appleboy/scp-action@v0.1.7
+#        with:
+#          host: ${{ secrets.EC2_HOST }}
+#          username: ${{ secrets.EC2_USERNAME }}
+#          key: ${{ secrets.EC2_PRIVATE_KEY }}
+#          source: project.jar
+#          target: /home/ubuntu/CICDSpringBootTest/tobe
+#
+#      - name: SSH로 EC2 원격 접속하기
+#        uses: appleboy/ssh-action@v1.1.0
+#        with:
+#          host: ${{ secrets.EC2_HOST }}
+#          username: ${{ secrets.EC2_USERNAME }}
+#          key: ${{ secrets.EC2_PRIVATE_KEY }}
+#          script_stop: true
+#          script: |
+#            rm -rf /home/ubuntu/CICDSpringBootTest/current
+#            mkdir /home/ubuntu/CICDSpringBootTest/current
+#            mv /home/ubuntu/CICDSpringBootTest/tobe/project.jar /home/ubuntu/CICDSpringBootTest/current/project.jar
+#            cd /home/ubuntu/CICDSpringBootTest/current
+#            sudo juser -k -n tcp 8080 || true
+#            sudo nohup java -jar project.jar > ./output.log 2>&1 &
+#            rm -rf /home/ubuntu/CICDSpringBootTest/tobe
+
 
 
