@@ -54,7 +54,7 @@ jobs:
 
       - name: 코드디플로이를 활용해 EC2에 프로젝트 코드를 배포하라고 명령
         run: aws deploy create-deployment
-            --application-name CICDSpringBootTest
+            --application-name CICD-TEST
             --deployment-config CodeDeployDefault.AllAtOnce
             --deployment-group-name Production
             --s3-location bucket=cicd-test-s3-typehoon-auhfkvzj,bundleType=tgz,key=$GITHUB_SHA.tar.gz
