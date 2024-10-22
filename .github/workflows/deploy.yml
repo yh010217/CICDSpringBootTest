@@ -56,7 +56,7 @@ jobs:
         run: aws deploy create-deployment
             --application-name CICD-TEST
             --deployment-config CodeDeployDefault.AllAtOnce
-            --deployment-group-name Production
+            --deployment-group-name production
             --s3-location bucket=cicd-test-s3-typehoon-auhfkvzj,bundleType=tgz,key=$GITHUB_SHA.tar.gz
 
 
