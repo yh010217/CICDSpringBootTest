@@ -61,6 +61,25 @@ jobs:
       - name: ECR에 도커 이미지 푸시
         run: docker push ${{ steps.login-ecr.outputs.registry }}/typehoon/cicd-test:latest
 
+      # 나는 키가 있어도 인바운드 보안 규칙을 막아놨어가지고 이거 해야 접속할 수 있음
+      - name: Get Actions IP
+        id: ip
+        uses: haythem/public-ip@v1.3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: 'ap-northeast-2'
+      - name: Add GitHub Actions IP
+        run: |
+          aws ec2 authorize-security-group-ingress \
+              --group-id ${{ secrets.SECURITY_GROUP_ID }} \
+              --protocol tcp \
+              --port 22 \
+              --cidr ${{ steps.ip.outputs.ipv4 }}/32
+
+
       - name: SSH로 EC2에 접속하기
         uses: appleboy/ssh-action@v1.1.0
         with:
@@ -74,6 +93,13 @@ jobs:
             docker pull ${{ steps.login-ecr.outputs.registry }}/typehoon/cicd-test:latest
             sudo docker run -d --name cicd-server -p 80:80 ${{ steps.login-ecr.outputs.registry }}/typehoon/cicd-test:latest
 
+      - name: Revoke GitHub Actions IP
+        run: |
+          aws ec2 revoke-security-group-ingress \
+              --group-id ${{ secrets.SECURITY_GROUP_ID }} \
+              --protocol tcp \
+              --port 22 \
+              --cidr ${{ steps.ip.outputs.ipv4 }}/32
 # 처음 했던 코드
 #      - name: SSH로 EC2 원격 접속하기
 #        uses: appleboy/ssh-action@v1.1.0
