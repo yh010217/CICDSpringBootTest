@@ -49,18 +49,34 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: S3에 프로젝트 폴더 업로드하기
-        run: aws s3 cp --region ap-northeast-2 ./$GITHUB_SHA.tar.gz s3://cicd-test-s3-typehoon-auhfkvzj/$GITHUB_SHA.tar.gz
+      - name: ECR 에 로그인 하기
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-      - name: 코드디플로이를 활용해 EC2에 프로젝트 코드를 배포하라고 명령
-        run: aws deploy create-deployment
-            --application-name CICD-TEST
-            --deployment-config CodeDeployDefault.AllAtOnce
-            --deployment-group-name production
-            --s3-location bucket=cicd-test-s3-typehoon-auhfkvzj,bundleType=tgz,key=$GITHUB_SHA.tar.gz
+      - name: 도커 이미지 생성
+        run: docker build -t cicd-server .
 
+        # steps.login-ecr.outputs.registry 각 스텝별로 위,위에 있는거 login-ecr이라는
+        # 스텝 진행하면서 뭔가 생기는 output 이 있나봐 ~ 우리가 만든 리파지토리 url주소..
+        # 뒤에 슬래시는 내가 만들어놓은거 보고 써야하는듯..
+      - name: 도커 이미지에 태그 붙이기
+        run: docker tag cicd-server ${{ steps.login-ecr.outputs.registry }}/typehoon/cicd-test:latest
 
+      - name: ECR에 도커 이미지 푸시
+        run: docker push ${{ steps.login-ecr.outputs.registry }}/typehoon/cicd-test:latest
 
+      - name: SSH로 EC2에 접속하기
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            docker stop cicd-server || true
+            docker rm cicd-server || true
+            docker pull ${{ steps.login-ecr.outputs.registry }}/typehoon/cicd-test:latest
+            sudo docker run -d --name cicd-server -p 80:80 ${{ steps.login-ecr.outputs.registry }}/typehoon/cicd-test:latest
 
 # 처음 했던 코드
 #      - name: SSH로 EC2 원격 접속하기
@@ -134,6 +150,18 @@ jobs:
 #            sudo juser -k -n tcp 8080 || true
 #            sudo nohup java -jar project.jar > ./output.log 2>&1 &
 #            rm -rf /home/ubuntu/CICDSpringBootTest/tobe
+
+# s3 와 코드 디플로이를 통한
+#      - name: S3에 프로젝트 폴더 업로드하기
+#        run: aws s3 cp --region ap-northeast-2 ./$GITHUB_SHA.tar.gz s3://cicd-test-s3-typehoon-auhfkvzj/$GITHUB_SHA.tar.gz
+#
+#      - name: 코드디플로이를 활용해 EC2에 프로젝트 코드를 배포하라고 명령
+#        run: aws deploy create-deployment
+#          --application-name CICD-TEST
+#          --deployment-config CodeDeployDefault.AllAtOnce
+#          --deployment-group-name production
+#          --s3-location bucket=cicd-test-s3-typehoon-auhfkvzj,bundleType=tgz,key=$GITHUB_SHA.tar.gz
+
 
 
 

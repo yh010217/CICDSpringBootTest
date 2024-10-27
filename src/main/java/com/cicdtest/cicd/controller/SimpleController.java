@@ -13,4 +13,8 @@ public class SimpleController {
     public String hello(){
         return "hello method added";
     }
+    @GetMapping("docker")
+    public String docker(){
+        return "docker success";
+    }
 }
