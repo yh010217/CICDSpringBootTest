@@ -61,45 +61,19 @@ jobs:
       - name: ECR에 도커 이미지 푸시
         run: docker push ${{ steps.login-ecr.outputs.registry }}/typehoon/cicd-test:latest
 
-      # 나는 키가 있어도 인바운드 보안 규칙을 막아놨어가지고 이거 해야 접속할 수 있음
-      - name: Get Actions IP
-        id: ip
-        uses: haythem/public-ip@v1.3
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: 'ap-northeast-2'
-      - name: Add GitHub Actions IP
-        run: |
-          aws ec2 authorize-security-group-ingress \
-              --group-id ${{ secrets.SECURITY_GROUP_ID }} \
-              --protocol tcp \
-              --port 22 \
-              --cidr ${{ steps.ip.outputs.ipv4 }}/32
+      - name: 압축하기 - appspec.yml 과 scripts 폴더를 넣어서(project 는 ECR 도커에 있음)
+        run: tar -czvf $GITHUB_SHA.tar.gz appspec.yml scripts
 
+      - name: S3 에 프로젝트 폴더 업로드하기
+        run: aws s3 cp --region ap-northeast-2 ./$GITHUB_SHA.tar.gz s3://cicd-test-s3-typehoon-auhfkvzj/$GITHUB_SHA.tar.gz
 
-      - name: SSH로 EC2에 접속하기
-        uses: appleboy/ssh-action@v1.1.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_PRIVATE_KEY }}
-          script_stop: true
-          script: |
-            docker stop cicd-server || true
-            docker rm cicd-server || true
-            docker pull ${{ steps.login-ecr.outputs.registry }}/typehoon/cicd-test:latest
-            sudo docker run -d --name cicd-server -p 80:80 ${{ steps.login-ecr.outputs.registry }}/typehoon/cicd-test:latest
+      - name: 코드 디플로이를 통해 EC2 프로젝트 코드 배포
+        run: aws deploy create-deployment
+          --application-name CICD-TEST
+          --deployment-config CodeDeployDefault.AllAtOnce
+          --deployment-group-name production
+          --s3-location bucket=cicd-test-s3-typehoon-auhfkvzj,bundleType=tgz,key=$GITHUB_SHA.tar.gz
 
-      - name: Revoke GitHub Actions IP
-        run: |
-          aws ec2 revoke-security-group-ingress \
-              --group-id ${{ secrets.SECURITY_GROUP_ID }} \
-              --protocol tcp \
-              --port 22 \
-              --cidr ${{ steps.ip.outputs.ipv4 }}/32
 # 처음 했던 코드
 #      - name: SSH로 EC2 원격 접속하기
 #        uses: appleboy/ssh-action@v1.1.0
@@ -190,6 +164,44 @@ jobs:
 #          --deployment-group-name production
 #          --s3-location bucket=cicd-test-s3-typehoon-auhfkvzj,bundleType=tgz,key=$GITHUB_SHA.tar.gz
 
-
-
+#     EC2에 직접 접속해서 도커 실행하라고 시키기
+#      # 나는 키가 있어도 인바운드 보안 규칙을 막아놨어가지고 이거 해야 접속할 수 있음
+#      - name: Get Actions IP
+#        id: ip
+#        uses: haythem/public-ip@v1.3
+#      - name: Configure AWS credentials
+#        uses: aws-actions/configure-aws-credentials@v4
+#        with:
+#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          aws-region: 'ap-northeast-2'
+#      - name: Add GitHub Actions IP
+#        run: |
+#          aws ec2 authorize-security-group-ingress \
+#              --group-id ${{ secrets.SECURITY_GROUP_ID }} \
+#              --protocol tcp \
+#              --port 22 \
+#              --cidr ${{ steps.ip.outputs.ipv4 }}/32
+#
+#
+#      - name: SSH로 EC2에 접속하기
+#        uses: appleboy/ssh-action@v1.1.0
+#        with:
+#          host: ${{ secrets.EC2_HOST }}
+#          username: ${{ secrets.EC2_USERNAME }}
+#          key: ${{ secrets.EC2_PRIVATE_KEY }}
+#          script_stop: true
+#          script: |
+#            docker stop cicd-server || true
+#            docker rm cicd-server || true
+#            docker pull ${{ steps.login-ecr.outputs.registry }}/typehoon/cicd-test:latest
+#            sudo docker run -d --name cicd-server -p 80:80 ${{ steps.login-ecr.outputs.registry }}/typehoon/cicd-test:latest
+#
+#      - name: Revoke GitHub Actions IP
+#        run: |
+#          aws ec2 revoke-security-group-ingress \
+#              --group-id ${{ secrets.SECURITY_GROUP_ID }} \
+#              --protocol tcp \
+#              --port 22 \
+#              --cidr ${{ steps.ip.outputs.ipv4 }}/32
 
